@@ -32,6 +32,7 @@ while(True):
     bitcoindata = bitcoindata.astype({'Hash': str, 'Time': str, 'BTC': float, 'USD': str})
     #print(bitcoindata)
 
+    # sorting and printing dataframe
     bitcoindata = bitcoindata.sort_values(by=['BTC'], ascending=False, ignore_index=True)
     print(bitcoindata[0:5])
     time.sleep(60)
