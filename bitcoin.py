@@ -1,18 +1,29 @@
 # Importing the necessary applications for the scraper
 # ----------------------------------------------------
+# IMPORTS FOR THE ACTUAL SCRAPER
+# ------------------------------
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 import regex as re
 import time
-import pymongo as mongo 
-import urllib.parse
+
+# IMPORTS FOR MONGODB
+# -------------------
+import pymongo as mongo
+
+# IMPORTS FOR REDIS
+# -----------------
+import redis
+import ast
 
 # SCRAPER BLOCKCHAIN
 # Start of the actual scraper
 # Putting it in a while to make sure that this continues untill the person stops the program.
 # -------------------------------------------------------------------------------------------
-while(True):
+counter = 0 # Counter to empty redis completely every run
+loops = 0 # Loops untill the max loops is reached in this case being 5
+while(loops != 5):
     # PREPARING THE DATA TO BE CAPTURED
     # The data we need to start the scraper
     # -------------------------------------
@@ -44,7 +55,7 @@ while(True):
     for i in range(0, 30):
         bitcoinlinesplit = bitcoinlines[i].split(';')
         bitcointijdelijk.append(bitcoinlinesplit)
-
+    
     # DATAFRAME
     # Here we create the dataframe that will store the different values to be able to take the 5 highest
     # bitcoin lines out of it and change the value of BTC to floats so we can sort them later on
@@ -58,22 +69,50 @@ while(True):
     bitcoindata = bitcoindata.sort_values(by=['BTC'], ascending=False, ignore_index=True)
     # We print 0:5 because we want only the first 5 ( 5 here is not included into this but the 0 is so it prints from 0 to 4)
     # -----------------------------------------------------------------------------------------------------------------------
-    print(bitcoindata[0:5])
 
-    # DATABASE
-    # We make a client where we will connect to the database where we want the data to be saved
-    # -----------------------------------------------------------------------------------------
-    client=mongo.MongoClient("mongodb://127.0.0.1:27017")
-    mydb = client["bitcoindata"]
+    # REDIS
+    # -----
+    # Changing the dataframe to a json file
+    # -------------------------------------
+    json = bitcoindata[0:5].to_json()
+    r = redis.Redis(host='localhost', port=6379) # Connection to redis
 
-    # We make the dataframe a dict so it can be put inside the database
-    datajson = bitcoindata[0:5].to_dict("lines")
+    # An if function to reset the redis every time we run the program
+    if(counter == 0):
+        dataset = r.delete("data") # Empty the redis 
+        r.lpush("data", json) # Push the data to the redis
+        counter = counter + 1 # Add a count to show we are working with the right data and go into the else
+    else:
+        r.lpush("data", json) # Push the data to the redis
     
-    # Here we make a column called bitcoin that we will put into the database 
-    col_bitcoin = mydb["Bitcoin"]
-
-    insertedcol = col_bitcoin.insert_one(datajson)
     # We make the program sleep for a minute so he takes the next hashes a minute after the first one he took so there will
     # be a minute difference between the first list and the second list of bitcoinlines
     # ---------------------------------------------------------------------------------------------------------------------
-    time.sleep(60)
+    loops = loops + 1 # Add a loop to run untill the max amount of loops
+    if(loops != 5):
+        time.sleep(60)
+
+
+# MORE REDIS
+# We put all the data in the variable dataset
+# -------------------------------------------
+dataset = r.lrange("data", 0,5)
+# Here we make a loop so we can change the data into a dictionary and put it back into dataset
+# --------------------------------------------------------------------------------------------
+for i in range(0,5):
+    dictionarybit = dataset[i].decode("UTF-8") # Make the data readable for a dictionary
+    mydata = ast.literal_eval(dictionarybit) # Change the data to a dictionary
+    dataset[i] = mydata # Put the data back in dataset so we get a list of dictionaries
+print(dataset) # Print the dictionaries to see if the program works
+
+# DATABASE
+# We make a client where we will connect to the database where we want the data to be saved
+# -----------------------------------------------------------------------------------------
+client=mongo.MongoClient("mongodb://127.0.0.1:27017")
+mydb = client["bitcoindata"]
+
+# Here we make a column called bitcoin that we will put into the database 
+col_bitcoin = mydb["Bitcoin"]
+
+# Here we insert the data into the mongodb
+insertedcol = col_bitcoin.insert_many(dataset)
