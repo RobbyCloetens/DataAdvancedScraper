@@ -75,7 +75,7 @@ while(loops != 5):
     # Changing the dataframe to a json file
     # -------------------------------------
     json = bitcoindata[0:5].to_json()
-    r = redis.Redis(host='localhost', port=6379) # Connection to redis
+    r = redis.Redis(host='localhost', port=6380) # Connection to redis
 
     # An if function to reset the redis every time we run the program
     if(counter == 0):
@@ -116,3 +116,5 @@ col_bitcoin = mydb["Bitcoin"]
 
 # Here we insert the data into the mongodb
 insertedcol = col_bitcoin.insert_many(dataset)
+
+# RUN REDIS WITH: redis-server --port 6380
