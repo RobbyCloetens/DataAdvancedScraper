@@ -23,7 +23,7 @@ import ast
 # -------------------------------------------------------------------------------------------
 counter = 0 # Counter to empty redis completely every run
 loops = 0 # Loops untill the max loops is reached in this case being 5
-while(loops != 5):
+while(loops != 2):
     # PREPARING THE DATA TO BE CAPTURED
     # The data we need to start the scraper
     # -------------------------------------
@@ -89,21 +89,21 @@ while(loops != 5):
     # be a minute difference between the first list and the second list of bitcoinlines
     # ---------------------------------------------------------------------------------------------------------------------
     loops = loops + 1 # Add a loop to run untill the max amount of loops
-    if(loops != 5):
+    if(loops != 2):
         time.sleep(60)
 
 
 # MORE REDIS
 # We put all the data in the variable dataset
 # -------------------------------------------
-dataset = r.lrange("data", 0,5)
+dataset = r.lrange("data", 0,2)
+print(dataset) # We print the dataset to see that it is actually saved in redis
 # Here we make a loop so we can change the data into a dictionary and put it back into dataset
 # --------------------------------------------------------------------------------------------
-for i in range(0,5):
+for i in range(0,2):
     dictionarybit = dataset[i].decode("UTF-8") # Make the data readable for a dictionary
     mydata = ast.literal_eval(dictionarybit) # Change the data to a dictionary
     dataset[i] = mydata # Put the data back in dataset so we get a list of dictionaries
-print(dataset) # Print the dictionaries to see if the program works
 
 # DATABASE
 # We make a client where we will connect to the database where we want the data to be saved
